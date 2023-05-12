@@ -23,10 +23,24 @@ if(navigator.geolocation)
       const { longitude } = position.coords; //軽度
       console.log(`https://www.google.co.jp/maps/@${latitude}.${longitude}`);
         //google mapのリンクというのは軽度と緯度が入っているのでテンプレートリテラルにすることで現在地のmapを出すことができる
-    },
+
+        const coords = [latitude,longitude];
+
+      const map = L.map('map').setView(coords, 13);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      }).addTo(map);
+
+      L.marker(coords).addTo(map)
+        .bindPopup('A pretty CSS popup.<br> Easily customizable.')
+        .openPopup();
+      },
     function(){ //二つ目はエラーコールバック
       alert('Cound not get youe current position')
     }
-  )
+  );
 //これだけで、現在の場所をとることができます
 //緯度と軽度で示されます
+
+// console.log(firstName);

@@ -24,18 +24,42 @@ if(navigator.geolocation)
       console.log(`https://www.google.co.jp/maps/@${latitude}.${longitude}`);
         //google mapのリンクというのは軽度と緯度が入っているのでテンプレートリテラルにすることで現在地のmapを出すことができる
 
-        const coords = [latitude,longitude];
+      //緯度と経度を一つの変数にまとめる
+      const coords = [latitude,longitude];
 
+      //これはleaflet のサイトからそのままコピーした
       const map = L.map('map').setView(coords, 13);
+      // console.log(map);
+      //mapの情報を見ることができる
 
       L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       }).addTo(map);
 
-      L.marker(coords).addTo(map)
-        .bindPopup('A pretty CSS popup.<br> Easily customizable.')
-        .openPopup();
-      },
+
+
+      //このon()はleaflet のライブラリに起因します.
+      //jsのaddEventListenerみたいな感じ
+      map.on('click',function(mapEvent){
+        console.log(mapEvent);
+        const {lat,lng} = mapEvent.latlng;
+        //クリックしたところの経度と緯度。latlngは緯度と経度を表している
+
+      //このmarkerは📍！
+        L.marker([lat,lng]) //これで指定された（クリックされた緯度と軽度の場所にピンが表示されるようになったよ）
+          .addTo(map) //📍を画面に表示させる
+          .bindPopup(L.popup({ 　//これは📍に表示されるメッセージ
+            maxWidth : 250, //最長辺
+            minWidth : 100, //最短辺
+            autoClose : false, //自動でpopupが消える（初期値はtrue)
+            closeOnClick : false, //クリックして閉じるのをfalseに
+            className : 'running-popup',//popupに好きなCSSクラスを割り当てることができる.runningは左端が緑になる
+          })
+        )
+          .setPopupContent('Workout') //初期値のメッセージ
+          .openPopup();
+      });
+    },
     function(){ //二つ目はエラーコールバック
       alert('Cound not get youe current position')
     }

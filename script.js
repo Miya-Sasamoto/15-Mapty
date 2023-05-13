@@ -11,9 +11,60 @@ const inputDuration = document.querySelector('.form__input--duration');//時間�
 const inputCadence = document.querySelector('.form__input--cadence'); //1分で何歩歩いたか.ランニングの時に表示
 const inputElevation = document.querySelector('.form__input--elevation');//標高を入力。サイクリングの時に表示
 
-let map,mapEvent;
-//グローバル変数として定義し直し。しかし、下のクラスでプライベートインスタンスとして再定義してる
+//ここでrunningとcyclingに共通するデータを取り込む
+class Workout {
+  //日付も大事な要素です　
+  date = new Date(); //その時の日付を取得
+  //uniqueなIDを作成して、そのIDを使用して識別できるようにする
+  //通常は、何かのライブラリを使ってuniqueなIDを作成するのが一般的
+  id = (Date.now() + '').slice(-10);//最後の10文字を出す
 
+  //座標、距離、時間がunningとcyclingに共通しているもの
+  constructor(coords,distance,duration){
+    this.coords = coords; //座標
+    this.distance = distance; //km単位 距離
+    this.duration = duration; //分単位　時間
+  }
+}
+
+//二つのWorkoutクラスを継承したRunningとCyclingクラスを作成
+class Running extends Workout{
+  //追加したいプロパティを設定するのを忘れないで
+  constructor(coords,distance,duration,cadence){
+    super(coords,distance,duration);
+    this.cadence = cadence;
+    this.calcPace();
+  }
+  //ペースを計算するメソッドを作成 min/km
+  calcPace(){
+    this.pace = this.duration / this.distance;
+    return this.pace;
+  } //算数の計算
+}
+
+class Cycling extends Workout{
+  constructor(coords,distance,duration,elevationGain){
+    super(coords,distance,duration);
+    this.elevationGain = elevationGain;
+    this.calcSpeed();
+  }
+  //スピードを計算するメソッドkm/h
+  calcSpeed(){
+    this.speed = this.distance /  (this.duration / 60);
+    //分だからそれを時間に直すためには/60する！
+    return this.speed
+  }
+}
+
+//↓テスト！
+// const run1 = new Running([39,-12],5.2,24,178);
+// const cycling1 = new Cycling([39,-12],27,95,523);
+// console.log(run1);
+// console.log(cycling1);
+
+
+////////////////////////////////////
+//APPLICATION ARCHITECTURE
 //それぞれのクラスをここにまとめるとわかりやすいです
 class App {
 
@@ -23,7 +74,6 @@ class App {
 
   constructor(){ //引数は入れない
     this._getPostition();
-
     //'submit'はそのformが送信されたときに発生します
     form.addEventListener('submit',this._newWorkout.bind(this));//このようにbindでthisを紐づけないといけないところは、かなり面倒くさいところではある.(手動でイベントリタッチする時の)
 
@@ -80,7 +130,7 @@ class App {
     inputDistance.focus(); //focusは表示されたときに、そこにカーソルが当たっている状態にすること.すぐに入力することができる
   }
 
-  //running とcyclingで違うフィールドをここで書き換え
+  //running とcyclingで違うフィールドをここで
   _toggleElevetionField(){
     inputElevation.closest('.form__row')
       .classList

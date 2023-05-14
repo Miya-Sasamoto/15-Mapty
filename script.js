@@ -1,10 +1,4 @@
 'use strict';
-
-// prettier-ignore
-const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-
-
-
 //ここでrunningとcyclingに共通するデータを取り込む
 class Workout {
   //日付も大事な要素です　
@@ -19,6 +13,16 @@ class Workout {
     this.distance = distance; //km単位 距離
     this.duration = duration; //分単位　時間
   }
+
+  _setDescription(){
+    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    //テンプレートリテラルを使って、説明文を書く
+    //Running(最初だけ大文字)on 日付
+    this.description = `${this.type[0].toUpperCase()}${this.type.slice(1)} on ${
+      months[this.date.getMonth()]
+    } ${this.date.getDate()}`;
+    //Month[this.date.getMonth()]なのは、配列が0ベースなので、arrayにするとちょうどいいから。
+  }
 }
 
 //二つのWorkoutクラスを継承したRunningとCyclingクラスを作成
@@ -29,6 +33,7 @@ class Running extends Workout{
     super(coords,distance,duration);
     this.cadence = cadence;
     this.calcPace();
+    this._setDescription();
   }
   //ペースを計算するメソッドを作成 min/km
   calcPace(){
@@ -44,6 +49,7 @@ class Cycling extends Workout{
     super(coords,distance,duration);
     this.elevationGain = elevationGain;
     this.calcSpeed();
+    this._setDescription();
   }
   //スピードを計算するメソッドkm/h
   calcSpeed(){
@@ -138,6 +144,17 @@ class App {
     inputDistance.focus(); //focusは表示されたときに、そこにカーソルが当たっている状態にすること.すぐに入力することができる
   }
 
+  _hideForm(){
+    inputDistance.value = inputDuration.value = inputCadence.value = inputElevation.value = '';
+    form.style.display = 'none';
+    //このhiddenクラスは自動的にanimationのトリガーになる
+    form.classList.add('hidden');
+    //1秒後にgridの状態に戻すようにする
+    setTimeout(() => form.style.display = 'grid',1000);
+  }
+
+
+
   //running とcyclingで違うフィールドをここで
   _toggleElevetionField(){
     inputElevation.closest('.form__row').classList.toggle('form__row--hidden');
@@ -205,18 +222,17 @@ class App {
     console.log(workout);
 
     //⑦新しいworkOutをformとしてリスト上にレンダリング　
+    this._renderWorkout(workout);
+
 
     //⑥workOutを地図上にマーカーとしてレンダリング（画像を生成して表示）
-    this.renderWorkoutMarker(workout)
+    this._renderWorkoutMarker(workout)
 
     //入力するフォームを空にして、formをhiddenにする
-    inputDistance.value　//form要素だから、.value忘れないで！！！
-    = inputDuration.value
-    = inputCadence.value
-    = inputElevation.value
-    = ''; //空文字
+    this._hideForm();
+
   }
-  renderWorkoutMarker(workout){
+  _renderWorkoutMarker(workout){
     //このmarkerは📍！
     L.marker(workout.coords) //これで指定された（クリックされた緯度と軽度の場所にピンが表示されるようになったよ）
       .addTo(this.#map) //📍を画面に表示させる
@@ -228,8 +244,61 @@ class App {
         className : `${workout.type}-popup`,//popupに好きなCSSクラスを割り当てることができる.runningは左端が緑になる
         })
       )
-    .setPopupContent('workout') //初期値のメッセージ
+    .setPopupContent(`${workout.type === 'running' ? '🏃‍♂️' : '🚴'} ${workout.description}`) //マップのピンのところに表示されるメッセージ
     .openPopup();
+
+
+  }
+
+  _renderWorkout(workout){
+    //DOM操作を基本的に行う.新しいworkoutがあるたびに、DOMに追加していくhtmlで操作をすると簡単
+    //後からrunningとcyclingで違うhtmlを追加するのでletで定義
+    let html =`
+        <li class="workout workout--${workout
+        .type}" data-id="${workout.id}">
+          <h2 class="workout__title">${workout.description}</h2>
+          <div class="workout__details">
+            <span class="workout__icon">${workout.type === 'running' ? '🏃‍♂️' : '🚴‍♀️'}</span>
+            <span class="workout__value">${workout.distance}</span>
+            <span class="workout__unit">km</span>
+          </div>
+          <div class="workout__details">
+            <span class="workout__icon">⏱</span>
+            <span class="workout__value">${workout.duration}</span>
+            <span class="workout__unit">min</span>
+          </div>
+    `;
+    //runningの時に使用されるhtmlをここで+=で追加できる
+    if(workout.type === 'running')
+      html += `
+          <div class="workout__details">
+            <span class="workout__icon">⚡️</span>
+            <span class="workout__value">${workout.pace.toFixed(1)}</span>
+            <span class="workout__unit">min/km</span>
+          </div>
+          <div class="workout__details">
+            <span class="workout__icon">🦶🏼</span>
+            <span class="workout__value">${workout.cadence}</span>
+            <span class="workout__unit">spm</span>
+          </div>
+        </li>
+      `;
+      //paceのtoFixed(1)は小数点以下一桁に修正する
+    if(workout.type === 'cycling')
+      html += `
+          <div class="workout__details">
+            <span class="workout__icon">⚡️</span>
+            <span class="workout__value">${workout.speed.toFixed(1)}</span>
+            <span class="workout__unit">km/h</span>
+          </div>
+          <div class="workout__details">
+            <span class="workout__icon">⛰</span>
+            <span class="workout__value">${workout.elevationGain}</span>
+            <span class="workout__unit">m</span>
+          </div>
+        </li>
+      `;
+    form.insertAdjacentHTML('afterend',html);
   }
 }
 

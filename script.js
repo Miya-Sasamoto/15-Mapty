@@ -6,6 +6,7 @@ class Workout {
   //uniqueなIDを作成して、そのIDを使用して識別できるようにする
   //通常は、何かのライブラリを使ってuniqueなIDを作成するのが一般的
   id = (Date.now() + '').slice(-10);//最後の10文字を出す
+  clicks = 0; //クリック回数は０からスタート
 
   //座標、距離、時間がunningとcyclingに共通しているもの
   constructor(coords,distance,duration){
@@ -22,6 +23,10 @@ class Workout {
       months[this.date.getMonth()]
     } ${this.date.getDate()}`;
     //Month[this.date.getMonth()]なのは、配列が0ベースなので、arrayにするとちょうどいいから。
+  }
+  click(){
+    this.clicks++;
+    //左側のリストをクリックする度にここがインクリメントされていく感じ。
   }
 }
 
@@ -82,8 +87,9 @@ class App {
 
   //プライベートインスタンスフィールドにする場合は#をつけるルール！
   #map;
+  #mapZoomLevel = 13;
   #mapEvent;
-  #workout = []; //データをpushする空配列
+  #workouts = []; //データをpushする空配列
 
   constructor(){ //引数は入れない
 
@@ -94,6 +100,7 @@ class App {
     //runningとcyclingでは入力するフィールドに違いがあるため、toggleでクラスの付け替えをする
     //changeは値が変更された時に発生するイベント
     inputType.addEventListener('change',this._toggleElevetionField);
+    containerWorkouts.addEventListener('click',this._moveToPopup.bind(this))
   }
   //navigatorから地図を介して座標を持ってくる
   _getPostition(){
@@ -120,7 +127,7 @@ class App {
 
       //これはleaflet のサイトからそのままコピーした
       console.log(this);
-      this.#map = L.map('map').setView(coords, 13);
+      this.#map = L.map('map').setView(coords, this.#mapZoomLevel);
       // console.log(map);
       //mapの情報を見ることができる
 
@@ -152,8 +159,6 @@ class App {
     //1秒後にgridの状態に戻すようにする
     setTimeout(() => form.style.display = 'grid',1000);
   }
-
-
 
   //running とcyclingで違うフィールドをここで
   _toggleElevetionField(){
@@ -218,7 +223,7 @@ class App {
     }
 
     //⑤新しいデータをworkout配列に追加する
-    this.#workout.push(workout);
+    this.#workouts.push(workout);
     console.log(workout);
 
     //⑦新しいworkOutをformとしてリスト上にレンダリング　
@@ -232,6 +237,7 @@ class App {
     this._hideForm();
 
   }
+
   _renderWorkoutMarker(workout){
     //このmarkerは📍！
     L.marker(workout.coords) //これで指定された（クリックされた緯度と軽度の場所にピンが表示されるようになったよ）
@@ -246,8 +252,6 @@ class App {
       )
     .setPopupContent(`${workout.type === 'running' ? '🏃‍♂️' : '🚴'} ${workout.description}`) //マップのピンのところに表示されるメッセージ
     .openPopup();
-
-
   }
 
   _renderWorkout(workout){
@@ -299,6 +303,29 @@ class App {
         </li>
       `;
     form.insertAdjacentHTML('afterend',html);
+  }
+
+  _moveToPopup(e){
+    const workoutEl = e.target.closest('.workout');
+    console.log(workoutEl);
+
+    if(!workoutEl) return; //workoutElがなかったら何もしない
+
+    const workout = this.#workouts.find(work => work.id === workoutEl.dataset.id);
+    //idが同じものを見つける
+    console.log(workout);
+
+    //leafletには地図の中心の経緯度とズームレベルを指定できる
+    // 第一引数は座標、第二引数はズームレベル
+    this.#map.setView(workout.coords,this.mapZoomLevel,{
+      animate :true,
+      pan: {
+        duration :1,
+      },
+    });
+
+    //Using public interface
+    workout.click();
   }
 }
 

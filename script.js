@@ -91,9 +91,14 @@ class App {
   #mapEvent;
   #workouts = []; //データをpushする空配列
 
-  constructor(){ //引数は入れない
-
+   constructor(){ //引数は入れない
+     ///GET USER POSITION///
     this._getPostition();
+
+    ///GET DATA FROM LOCAL STORAGE///
+    this._getLocalStorage();
+
+    ///ATTACH EVENT HANDLER///
     //'submit'はそのformが送信されたときに発生します
     form.addEventListener('submit',this._newWorkout.bind(this));//このようにbindでthisを紐づけないといけないところは、かなり面倒くさいところではある.(手動でイベントリタッチする時の)
 
@@ -126,7 +131,6 @@ class App {
       const coords = [latitude,longitude];
 
       //これはleaflet のサイトからそのままコピーした
-      console.log(this);
       this.#map = L.map('map').setView(coords, this.#mapZoomLevel);
       // console.log(map);
       //mapの情報を見ることができる
@@ -139,6 +143,11 @@ class App {
       //Handling clicks on map
       //このon()はleaflet のライブラリに起因。jsのaddEventListenerみたいな感じ
       this.#map.on('click',this._showForm.bind(this));
+
+      this.#workouts.forEach(work => {
+        this._renderWorkoutMarker(work);
+      });
+
         //地図をクリックしたときにformを表示させるようにする。
     }
 
@@ -224,7 +233,6 @@ class App {
 
     //⑤新しいデータをworkout配列に追加する
     this.#workouts.push(workout);
-    console.log(workout);
 
     //⑦新しいworkOutをformとしてリスト上にレンダリング　
     this._renderWorkout(workout);
@@ -235,6 +243,9 @@ class App {
 
     //入力するフォームを空にして、formをhiddenにする
     this._hideForm();
+
+    //ローカルストレージに全てのworkoutを保存する
+    this._setLocalStprage();
 
   }
 
@@ -307,7 +318,6 @@ class App {
 
   _moveToPopup(e){
     const workoutEl = e.target.closest('.workout');
-    console.log(workoutEl);
 
     if(!workoutEl) return; //workoutElがなかったら何もしない
 
@@ -325,8 +335,46 @@ class App {
     });
 
     //Using public interface
-    workout.click();
+    // workout.click();
   }
+    _setLocalStprage(){
+      //このlocalStorageはwebAPIなので、無料で使うことができるライブラリです
+      //一つ目の引数は名前、二つ目の引数は、保存したい文字列を指定.一つ目の引数とキーで関連付ける必要がある
+      //JSON.stringify() メソッドは、ある JavaScript のオブジェクトや値を JSON 文字列に変換します。
+      localStorage.setItem('wourkouts',JSON.stringify(this.#workouts));
+      //⏫これだけ。これだけでローカルストレージに保存できる。非常にシンプルなAPI
+    }
+
+    _getLocalStorage(){
+      //getItemはデータを取得できる keyを手がかりにして
+      const data = JSON.parse(localStorage.getItem('wourkouts'));
+      //JSON.parseはJSON.stringifyの逆
+      //文字列を JSON として解析し、文字列によって記述されている JavaScript の値やオブジェクトを返す
+      //しかしこのようにlocal storageからくる値は、以前のように全てのメソッドを継承することができないことを覚えておくように
+
+      //ストアされているdataがない時は何もしない
+      if(!data) return;
+
+      //local storageにデータがある場合は、dataがその#workoutにpushされたデータである
+      this.#workouts = data;
+
+      //この_renderWorkoutをここに書くことによって、リロードした時にすぐに左側に表示されるようになる
+      this.#workouts.forEach(work => {
+        this._renderWorkout(work);
+        //_renderWorkoutは左側にリストをしていくやつ
+        // this._renderWorkoutMarker(work);
+        //_renderWorkoutMarkerは地図上のピン
+        //実はこの場所だと、エラーが出る。なぜなら地図上にピンを表示するという作業は「地図を読み込んで、場所を読み込んで、からの地図にピンを立てるという流れになるので、JSの非同期処理の関係でこの時点ではまだ読み込まれていないのです。エラーになる
+        //⇨_renderWorkoutMarkerは_loadMapのところに移動した
+      });
+    }
+    //local storageに入ったデータを消す方法
+      reset(){
+        localStorage.removeItem('wourkouts');
+        location.reload();
+        //locationは基本的にブラウザで提供されているwebAPIみたいな感じ
+        //実際の消し方は、app.reset()ってやると消えて、自動的にリロードされるよ
+      }
 }
 
 //インスタンス化
